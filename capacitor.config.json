@@ -1,6 +1,6 @@
 {
   "appId": "com.kasimur.sport",
-  "appName": "Kasimur Sport",
+  "appName": "KMs",
   "webDir": "dist",
   "server": {
     "androidScheme": "https"
