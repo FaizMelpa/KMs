@@ -1,0 +1,8 @@
+{
+  "appId": "com.kasimur.sport",
+  "appName": "Kasimur Sport",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}
