@@ -365,15 +365,24 @@ function BackupModal({ onClose, onRestore }: { onClose: () => void; onRestore: (
       const blob = new Blob([json], { type: "application/json" });
       const fileName = `KasiMurahSport-${new Date().toISOString().slice(0, 10)}.json`;
 
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      setResult("✓ Backup berhasil didownload ke folder Download!");
+      // Try share API first (most reliable on Android)
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], fileName)] })) {
+        await navigator.share({
+          files: [new File([blob], fileName, { type: "application/json" })],
+          title: "Backup KasiMurahSport",
+        });
+        setResult("✓ Backup berhasil dibagikan/disimpan!");
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        setResult("✓ File backup berhasil didownload!");
+      }
     } catch (e: any) {
       if (e.name !== 'AbortError') setResult("✗ Gagal menyimpan backup.");
     }
@@ -475,13 +484,13 @@ function ProductCard({ product, onEdit }: {
           </div>
         )}
         <div className="space-y-0.5">
-          <div className="flex justify-between">
-            <span className="text-xs text-gray-500">Eceran</span>
-            <span className="text-xs font-bold text-emerald-600">{formatRupiah(product.priceRetail)}</span>
+          <div className="flex justify-between items-center gap-1">
+            <span className="text-xs text-gray-500 shrink-0">Eceran</span>
+            <span className="text-xs font-bold text-emerald-600 truncate text-right">{formatRupiah(product.priceRetail)}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-xs text-gray-500">Grosir</span>
-            <span className="text-xs font-medium text-blue-600">{formatRupiah(product.priceWholesale)}</span>
+          <div className="flex justify-between items-center gap-1">
+            <span className="text-xs text-gray-500 shrink-0">Grosir</span>
+            <span className="text-xs font-medium text-blue-600 truncate text-right">{formatRupiah(product.priceWholesale)}</span>
           </div>
         </div>
       </div>
