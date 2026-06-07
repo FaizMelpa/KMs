@@ -484,13 +484,13 @@ function ProductCard({ product, onEdit }: {
           </div>
         )}
         <div className="space-y-0.5">
-          <div className="flex justify-between items-center gap-1">
-            <span className="text-xs text-gray-500 shrink-0">Eceran</span>
-            <span className="text-xs font-bold text-emerald-600 truncate text-right">{formatRupiah(product.priceRetail)}</span>
+          <div className="flex justify-between">
+            <span className="text-xs text-gray-500">Eceran</span>
+            <span className="text-xs font-bold text-emerald-600">{formatRupiah(product.priceRetail)}</span>
           </div>
-          <div className="flex justify-between items-center gap-1">
-            <span className="text-xs text-gray-500 shrink-0">Grosir</span>
-            <span className="text-xs font-medium text-blue-600 truncate text-right">{formatRupiah(product.priceWholesale)}</span>
+          <div className="flex justify-between">
+            <span className="text-xs text-gray-500">Grosir</span>
+            <span className="text-xs font-medium text-blue-600">{formatRupiah(product.priceWholesale)}</span>
           </div>
         </div>
       </div>
