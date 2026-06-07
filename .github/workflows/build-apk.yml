@@ -43,17 +43,14 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Copy Icons
-        run: |
-          for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
-            mkdir -p android/app/src/main/res/$dir
-            cp icons/$dir/ic_launcher.png android/app/src/main/res/$dir/ic_launcher.png
-            cp icons/$dir/ic_launcher_round.png android/app/src/main/res/$dir/ic_launcher_round.png
-          done
-
       - name: Add Storage Permission
         run: |
           sed -i 's|</manifest>|    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>\n</manifest>|' android/app/src/main/AndroidManifest.xml
+
+      - name: Override Icons
+        run: |
+          pip install Pillow -q
+          python3 scripts/gen_icons.py
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
