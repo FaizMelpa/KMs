@@ -80,12 +80,15 @@ function ImageSlider({ images, editable, onAdd, onRemove, onPreview }: {
   const [uploading, setUploading] = useState(false);
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || !onAdd) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length || !onAdd) return;
     setUploading(true);
-    const b64 = await compressImage(file);
-    onAdd(b64);
-    setCur(images.length);
+    const remaining = 3 - images.length;
+    const toProcess = files.slice(0, remaining);
+    for (const file of toProcess) {
+      const b64 = await compressImage(file);
+      onAdd(b64);
+    }
     setUploading(false);
     e.target.value = "";
   }
@@ -131,7 +134,7 @@ function ImageSlider({ images, editable, onAdd, onRemove, onPreview }: {
           <Plus size={12} /> {images.length > 0 ? `${images.length}/3` : "Foto"}
         </button>
       )}
-      {editable && <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />}
+      {editable && <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFile} />}
     </div>
   );
 }
@@ -362,29 +365,15 @@ function BackupModal({ onClose, onRestore }: { onClose: () => void; onRestore: (
       const blob = new Blob([json], { type: "application/json" });
       const fileName = `KasiMurahSport-${new Date().toISOString().slice(0, 10)}.json`;
 
-      // Try modern File System API first (Android)
-      if ('showSaveFilePicker' in window) {
-        const handle = await (window as any).showSaveFilePicker({
-          suggestedName: fileName,
-          startIn: 'downloads',
-          types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-        setResult("✓ Backup disimpan ke folder Download!");
-      } else {
-        // Fallback: trigger download
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        setResult("✓ Backup berhasil didownload!");
-      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setResult("✓ Backup berhasil didownload ke folder Download!");
     } catch (e: any) {
       if (e.name !== 'AbortError') setResult("✗ Gagal menyimpan backup.");
     }
