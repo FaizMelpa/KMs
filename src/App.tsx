@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Search, Plus, Edit2, Trash2, Tag, X, Upload,
   Download, RefreshCw, Package, ChevronDown, Check,
-  ChevronLeft, ChevronRight, FileText,
+  ChevronLeft, ChevronRight, FileText, ZoomIn,
 } from "lucide-react";
 import { db, type Category, type Product } from "./db";
 
@@ -33,12 +33,47 @@ async function compressImage(file: File, maxSize = 800, quality = 0.7): Promise<
   });
 }
 
+// ─── ImagePreviewModal ────────────────────────────────────────────────────────
+function ImagePreviewModal({ images, startIdx, onClose }: {
+  images: string[];
+  startIdx: number;
+  onClose: () => void;
+}) {
+  const [cur, setCur] = useState(startIdx);
+
+  useEffect(() => {
+    const handleBack = (e: PopStateEvent) => { e.preventDefault(); onClose(); };
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener("popstate", handleBack);
+    return () => window.removeEventListener("popstate", handleBack);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center" onClick={onClose}>
+      <button onClick={onClose} className="absolute top-4 right-4 text-white bg-white/20 rounded-full p-2 z-10"><X size={20} /></button>
+      <img src={images[cur]} alt="preview" className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} />
+      {images.length > 1 && (
+        <>
+          <button onClick={(e) => { e.stopPropagation(); setCur((cur - 1 + images.length) % images.length); }}
+            className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/20 text-white rounded-full p-2"><ChevronLeft size={20} /></button>
+          <button onClick={(e) => { e.stopPropagation(); setCur((cur + 1) % images.length); }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/20 text-white rounded-full p-2"><ChevronRight size={20} /></button>
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+            {images.map((_, i) => <div key={i} className={"w-2 h-2 rounded-full " + (i === cur ? "bg-white" : "bg-white/40")} />)}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── ImageSlider ─────────────────────────────────────────────────────────────
-function ImageSlider({ images, editable, onAdd, onRemove }: {
+function ImageSlider({ images, editable, onAdd, onRemove, onPreview }: {
   images: string[];
   editable?: boolean;
   onAdd?: (base64: string) => void;
   onRemove?: (idx: number) => void;
+  onPreview?: (idx: number) => void;
 }) {
   const [cur, setCur] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -50,53 +85,50 @@ function ImageSlider({ images, editable, onAdd, onRemove }: {
     setUploading(true);
     const b64 = await compressImage(file);
     onAdd(b64);
+    setCur(images.length);
     setUploading(false);
     e.target.value = "";
   }
 
-  const showImages = images.length > 0;
-
   return (
-    <div className="relative w-full h-44 bg-gray-100 rounded-xl overflow-hidden">
-      {showImages ? (
+    <div className="relative w-full h-52 bg-gray-100 rounded-xl overflow-hidden">
+      {images.length > 0 ? (
         <>
           <img src={images[cur]} alt="product" className="w-full h-full object-cover" />
-          {images.length > 1 && (
-            <>
-              <button onClick={() => setCur((cur - 1 + images.length) % images.length)}
-                className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-1">
-                <ChevronLeft size={16} />
-              </button>
-              <button onClick={() => setCur((cur + 1) % images.length)}
-                className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-1">
-                <ChevronRight size={16} />
-              </button>
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                {images.map((_, i) => (
-                  <div key={i} className={"w-1.5 h-1.5 rounded-full " + (i === cur ? "bg-white" : "bg-white/50")} />
-                ))}
-              </div>
-            </>
+          {onPreview && (
+            <button onClick={() => onPreview(cur)}
+              className="absolute top-2 left-2 bg-black/40 text-white rounded-full p-1.5 backdrop-blur-sm">
+              <ZoomIn size={16} />
+            </button>
           )}
           {editable && onRemove && (
             <button onClick={() => { onRemove(cur); setCur(0); }}
-              className="absolute top-2 right-2 bg-white/80 rounded-full p-1 hover:bg-white">
+              className="absolute top-2 right-2 bg-white/80 rounded-full p-1.5 hover:bg-white">
               <X size={14} />
             </button>
           )}
+          {images.length > 1 && (
+            <>
+              <button onClick={() => setCur((cur - 1 + images.length) % images.length)}
+                className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/30 text-white rounded-full p-1"><ChevronLeft size={16} /></button>
+              <button onClick={() => setCur((cur + 1) % images.length)}
+                className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/30 text-white rounded-full p-1"><ChevronRight size={16} /></button>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                {images.map((_, i) => <div key={i} className={"w-1.5 h-1.5 rounded-full " + (i === cur ? "bg-white" : "bg-white/50")} />)}
+              </div>
+            </>
+          )}
         </>
       ) : (
-        <div className="w-full h-full flex items-center justify-center text-gray-400">
-          <div className="flex flex-col items-center gap-2">
-            {uploading ? <RefreshCw size={28} className="animate-spin" /> : <Upload size={28} />}
-            <span className="text-sm">{uploading ? "Memproses..." : "Belum ada foto"}</span>
-          </div>
+        <div className="w-full h-full flex items-center justify-center text-gray-400 flex-col gap-2">
+          {uploading ? <RefreshCw size={28} className="animate-spin" /> : <Upload size={28} />}
+          <span className="text-sm">{uploading ? "Memproses..." : "Belum ada foto"}</span>
         </div>
       )}
       {editable && images.length < 3 && onAdd && (
         <button onClick={() => fileRef.current?.click()}
-          className="absolute bottom-2 right-2 bg-emerald-500 text-white rounded-full px-2 py-1 text-xs flex items-center gap-1 shadow">
-          <Plus size={12} /> Foto {images.length > 0 ? `(${images.length}/3)` : ""}
+          className="absolute bottom-2 right-2 bg-emerald-500 text-white rounded-full px-2.5 py-1 text-xs flex items-center gap-1 shadow">
+          <Plus size={12} /> {images.length > 0 ? `${images.length}/3` : "Foto"}
         </button>
       )}
       {editable && <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />}
@@ -105,11 +137,12 @@ function ImageSlider({ images, editable, onAdd, onRemove }: {
 }
 
 // ─── ProductModal ─────────────────────────────────────────────────────────────
-function ProductModal({ product, categories, onSave, onClose }: {
+function ProductModal({ product, categories, onSave, onClose, onDelete }: {
   product: Product | null;
   categories: Category[];
   onSave: () => void;
   onClose: () => void;
+  onDelete?: () => void;
 }) {
   const [name, setName] = useState(product?.name || "");
   const [categoryId, setCategoryId] = useState<number | "">(product?.categoryId ?? "");
@@ -118,6 +151,7 @@ function ProductModal({ product, categories, onSave, onClose }: {
   const [images, setImages] = useState<string[]>(product?.images || []);
   const [notes, setNotes] = useState(product?.notes || "");
   const [error, setError] = useState("");
+  const [previewIdx, setPreviewIdx] = useState<number | null>(null);
 
   useEffect(() => {
     const handleBack = (e: PopStateEvent) => { e.preventDefault(); onClose(); };
@@ -125,13 +159,6 @@ function ProductModal({ product, categories, onSave, onClose }: {
     window.addEventListener("popstate", handleBack);
     return () => window.removeEventListener("popstate", handleBack);
   }, [onClose]);
-
-  function addImage(b64: string) {
-    if (images.length < 3) setImages([...images, b64]);
-  }
-  function removeImage(idx: number) {
-    setImages(images.filter((_, i) => i !== idx));
-  }
 
   function handleSave() {
     if (!name.trim()) { setError("Nama barang wajib diisi"); return; }
@@ -149,68 +176,91 @@ function ProductModal({ product, categories, onSave, onClose }: {
     onClose();
   }
 
+  function handleDelete() {
+    if (!product || !onDelete) return;
+    if (!confirm("Hapus barang ini permanen?")) return;
+    db.deleteProduct(product.id);
+    onDelete();
+    onClose();
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50" onClick={onClose}>
-      <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-y-auto max-h-[92vh]"
-        onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b">
-          <h2 className="text-lg font-bold text-gray-900">{product ? "Edit Barang" : "Tambah Barang"}</h2>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100"><X size={18} /></button>
-        </div>
-        <div className="p-5 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Foto Barang (maks. 3)</label>
-            <ImageSlider images={images} editable onAdd={addImage} onRemove={removeImage} />
+    <>
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50" onClick={onClose}>
+        <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-y-auto max-h-[92vh]"
+          onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between px-5 py-4 border-b">
+            <h2 className="text-lg font-bold text-gray-900">{product ? "Edit Barang" : "Tambah Barang"}</h2>
+            <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100"><X size={18} /></button>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nama Barang</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 focus:border-transparent outline-none"
-              placeholder="Contoh: Sepatu Futsal" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
-            <div className="relative">
-              <select value={categoryId} onChange={(e) => setCategoryId(e.target.value ? parseInt(e.target.value) : "")}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm appearance-none focus:ring-2 focus:ring-emerald-400 outline-none bg-white">
-                <option value="">-- Tanpa Kategori --</option>
-                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-              <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="p-5 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Harga Eceran</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Foto Barang (maks. 3)</label>
+              <ImageSlider images={images} editable
+                onAdd={(b64) => setImages([...images, b64])}
+                onRemove={(idx) => setImages(images.filter((_, i) => i !== idx))}
+                onPreview={(idx) => setPreviewIdx(idx)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nama Barang</label>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 focus:border-transparent outline-none"
+                placeholder="Contoh: Sepatu Futsal" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">Rp</span>
-                <input type="number" inputMode="numeric" value={priceRetail} onChange={(e) => setPriceRetail(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 outline-none" placeholder="0" />
+                <select value={categoryId} onChange={(e) => setCategoryId(e.target.value ? parseInt(e.target.value) : "")}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm appearance-none focus:ring-2 focus:ring-emerald-400 outline-none bg-white">
+                  <option value="">-- Tanpa Kategori --</option>
+                  {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Harga Eceran</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">Rp</span>
+                  <input type="number" inputMode="numeric" value={priceRetail} onChange={(e) => setPriceRetail(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 outline-none" placeholder="0" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Harga Grosir</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">Rp</span>
+                  <input type="number" inputMode="numeric" value={priceWholesale} onChange={(e) => setPriceWholesale(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 outline-none" placeholder="0" />
+                </div>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Harga Grosir</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">Rp</span>
-                <input type="number" inputMode="numeric" value={priceWholesale} onChange={(e) => setPriceWholesale(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 outline-none" placeholder="0" />
-              </div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
+              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 outline-none resize-none"
+                placeholder="Contoh: Stok terbatas, ukuran 38-43" />
             </div>
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            <button onClick={handleSave}
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
+              <Check size={18} /> Simpan
+            </button>
+            {product && onDelete && (
+              <button onClick={handleDelete}
+                className="w-full bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
+                <Trash2 size={18} /> Hapus Barang Ini
+              </button>
+            )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 outline-none resize-none"
-              placeholder="Contoh: Stok terbatas, ukuran 38-43" />
-          </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleSave}
-            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
-            <Check size={18} /> Simpan
-          </button>
         </div>
       </div>
-    </div>
+      {previewIdx !== null && (
+        <ImagePreviewModal images={images} startIdx={previewIdx} onClose={() => setPreviewIdx(null)} />
+      )}
+    </>
   );
 }
 
@@ -268,7 +318,7 @@ function CategoryModal({ categories, onClose, onRefresh }: {
           <div className="space-y-2">
             {categories.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Belum ada kategori</p>}
             {categories.map((cat) => (
-              <div key={cat.id} className="flex items-center gap-2 group">
+              <div key={cat.id} className="flex items-center gap-2">
                 {editId === cat.id ? (
                   <>
                     <input autoFocus type="text" value={editName} onChange={(e) => setEditName(e.target.value)}
@@ -306,18 +356,38 @@ function BackupModal({ onClose, onRestore }: { onClose: () => void; onRestore: (
     return () => window.removeEventListener("popstate", handleBack);
   }, [onClose]);
 
-  function handleExport() {
-    const json = db.exportBackup();
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `KMs-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    setResult("✓ Backup berhasil didownload!");
+  async function handleExport() {
+    try {
+      const json = db.exportBackup();
+      const blob = new Blob([json], { type: "application/json" });
+      const fileName = `KasiMurahSport-${new Date().toISOString().slice(0, 10)}.json`;
+
+      // Try modern File System API first (Android)
+      if ('showSaveFilePicker' in window) {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: fileName,
+          startIn: 'downloads',
+          types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        setResult("✓ Backup disimpan ke folder Download!");
+      } else {
+        // Fallback: trigger download
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setResult("✓ Backup berhasil didownload!");
+      }
+    } catch (e: any) {
+      if (e.name !== 'AbortError') setResult("✗ Gagal menyimpan backup.");
+    }
   }
 
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
@@ -337,7 +407,7 @@ function BackupModal({ onClose, onRestore }: { onClose: () => void; onRestore: (
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50" onClick={onClose}>
-      <div className="bg-white w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden"
+      <div className="bg-white w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl shadow-2xl"
         onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <h2 className="text-lg font-bold text-gray-900">Backup & Restore</h2>
@@ -346,15 +416,15 @@ function BackupModal({ onClose, onRestore }: { onClose: () => void; onRestore: (
         <div className="p-5 space-y-4">
           <div>
             <h3 className="text-sm font-semibold text-gray-700 mb-1">Backup Data</h3>
-            <p className="text-xs text-gray-500 mb-3">Download semua data barang dan kategori ke folder Download HP.</p>
+            <p className="text-xs text-gray-500 mb-3">Simpan semua data ke folder Download HP.</p>
             <button onClick={handleExport}
               className="flex items-center justify-center gap-2 w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2.5 rounded-xl text-sm">
-              <Download size={18} /> Download Backup ke HP
+              <Download size={18} /> Simpan Backup ke Download
             </button>
           </div>
           <div className="border-t pt-4">
             <h3 className="text-sm font-semibold text-gray-700 mb-1">Restore Data</h3>
-            <p className="text-xs text-gray-500 mb-3">Pilih file backup dari HP. <strong className="text-orange-600">Data yang ada akan dihapus.</strong></p>
+            <p className="text-xs text-gray-500 mb-3">Pilih file backup. <strong className="text-orange-600">Data yang ada akan dihapus.</strong></p>
             <button onClick={() => fileRef.current?.click()} disabled={importing}
               className="flex items-center justify-center gap-2 w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl text-sm">
               {importing ? <RefreshCw size={18} className="animate-spin" /> : <Upload size={18} />}
@@ -372,61 +442,55 @@ function BackupModal({ onClose, onRestore }: { onClose: () => void; onRestore: (
 }
 
 // ─── ProductCard ──────────────────────────────────────────────────────────────
-function ProductCard({ product, onEdit, onDelete }: {
+function ProductCard({ product, onEdit }: {
   product: Product;
   onEdit: () => void;
-  onDelete: () => void;
 }) {
   const [imgIdx, setImgIdx] = useState(0);
   const imgs = product.images || [];
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden group">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden" onClick={onEdit}>
       <div className="relative aspect-square bg-gray-100 overflow-hidden">
         {imgs.length > 0 ? (
-          <img src={imgs[imgIdx]} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          <img src={imgs[imgIdx]} alt={product.name} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center"><Package size={36} className="text-gray-300" /></div>
         )}
         {imgs.length > 1 && (
           <>
-            <button onClick={() => setImgIdx((imgIdx - 1 + imgs.length) % imgs.length)}
-              className="absolute left-0.5 top-1/2 -translate-y-1/2 bg-black/30 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <ChevronLeft size={14} />
-            </button>
-            <button onClick={() => setImgIdx((imgIdx + 1) % imgs.length)}
-              className="absolute right-0.5 top-1/2 -translate-y-1/2 bg-black/30 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <ChevronRight size={14} />
-            </button>
+            <button onClick={(e) => { e.stopPropagation(); setImgIdx((imgIdx - 1 + imgs.length) % imgs.length); }}
+              className="absolute left-0.5 top-1/2 -translate-y-1/2 bg-black/30 text-white rounded-full p-0.5"><ChevronLeft size={14} /></button>
+            <button onClick={(e) => { e.stopPropagation(); setImgIdx((imgIdx + 1) % imgs.length); }}
+              className="absolute right-0.5 top-1/2 -translate-y-1/2 bg-black/30 text-white rounded-full p-0.5"><ChevronRight size={14} /></button>
             <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
               {imgs.map((_, i) => <div key={i} className={"w-1 h-1 rounded-full " + (i === imgIdx ? "bg-white" : "bg-white/50")} />)}
             </div>
           </>
         )}
-        <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={onEdit} className="bg-white/90 p-1.5 rounded-full shadow text-blue-600"><Edit2 size={12} /></button>
-          <button onClick={onDelete} className="bg-white/90 p-1.5 rounded-full shadow text-red-500"><Trash2 size={12} /></button>
-        </div>
         {product.categoryName && (
           <span className="absolute bottom-1.5 left-1.5 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded-full backdrop-blur-sm">
             {product.categoryName}
           </span>
         )}
+        <div className="absolute top-1.5 right-1.5 bg-white/80 rounded-full p-1.5">
+          <Edit2 size={11} className="text-gray-600" />
+        </div>
       </div>
       <div className="p-2.5">
-        <p className="text-sm font-semibold text-gray-900 leading-tight truncate mb-1.5">{product.name}</p>
+        <p className="text-sm font-semibold text-gray-900 leading-tight truncate mb-1">{product.name}</p>
         {product.notes && (
-          <div className="flex items-start gap-1 mb-1.5">
+          <div className="flex items-start gap-1 mb-1">
             <FileText size={11} className="text-gray-400 mt-0.5 shrink-0" />
             <p className="text-xs text-gray-500 line-clamp-2">{product.notes}</p>
           </div>
         )}
         <div className="space-y-0.5">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between">
             <span className="text-xs text-gray-500">Eceran</span>
             <span className="text-xs font-bold text-emerald-600">{formatRupiah(product.priceRetail)}</span>
           </div>
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between">
             <span className="text-xs text-gray-500">Grosir</span>
             <span className="text-xs font-medium text-blue-600">{formatRupiah(product.priceWholesale)}</span>
           </div>
@@ -454,11 +518,6 @@ export default function App() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  function deleteProduct(id: number) {
-    if (!confirm("Hapus barang ini?")) return;
-    db.deleteProduct(id); refresh();
-  }
-
   const tabs = [
     { id: "all", label: "Semua" },
     ...categories.map((c) => ({ id: String(c.id), label: c.name })),
@@ -467,13 +526,11 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top Brand Header */}
       <div className="bg-gray-900 px-4 py-2.5 flex items-center justify-between sticky top-0 z-40">
         <span className="text-white font-bold text-base tracking-wide">Kasi Murah Sport</span>
         <img src={FAIZ_LOGO} alt="Logo" className="w-9 h-9 rounded-full object-cover border-2 border-emerald-400" />
       </div>
 
-      {/* Search & Actions Header */}
       <header className="bg-white border-b border-gray-200 sticky top-[52px] z-30">
         <div className="max-w-4xl mx-auto px-4 py-2.5 flex items-center gap-2">
           <div className="flex-1 relative">
@@ -482,12 +539,8 @@ export default function App() {
               placeholder="Cari barang atau catatan..."
               className="w-full pl-8 pr-4 py-2 bg-gray-100 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-emerald-400 focus:outline-none transition-all" />
           </div>
-          <button onClick={() => setShowCategoryModal(true)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600" title="Kategori">
-            <Tag size={17} />
-          </button>
-          <button onClick={() => setShowBackupModal(true)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600" title="Backup">
-            <Download size={17} />
-          </button>
+          <button onClick={() => setShowCategoryModal(true)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600"><Tag size={17} /></button>
+          <button onClick={() => setShowBackupModal(true)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600"><Download size={17} /></button>
         </div>
         <div className="max-w-4xl mx-auto px-4 pb-2 overflow-x-auto no-scrollbar">
           <div className="flex gap-2 min-w-max">
@@ -501,7 +554,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* Content */}
       <main className="max-w-4xl mx-auto px-3 py-3 pb-24">
         {products.length === 0 ? (
           <div className="flex flex-col items-center py-20 text-gray-400 gap-3">
@@ -512,25 +564,25 @@ export default function App() {
           <div className="grid grid-cols-3 gap-2">
             {products.map((p) => (
               <ProductCard key={p.id} product={p}
-                onEdit={() => { setEditProduct(p); setShowProductModal(true); }}
-                onDelete={() => deleteProduct(p.id)} />
+                onEdit={() => { setEditProduct(p); setShowProductModal(true); }} />
             ))}
           </div>
         )}
         <p className="text-xs text-gray-400 text-center mt-3">{products.length} barang</p>
       </main>
 
-      {/* FAB */}
       <button onClick={() => { setEditProduct(null); setShowProductModal(true); }}
         className="fixed bottom-6 right-5 z-30 bg-emerald-500 hover:bg-emerald-600 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center">
         <Plus size={26} />
       </button>
 
       {showProductModal && (
-        <ProductModal product={editProduct} categories={categories} onSave={refresh} onClose={() => setShowProductModal(false)} />
+        <ProductModal product={editProduct} categories={categories} onSave={refresh}
+          onClose={() => setShowProductModal(false)}
+          onDelete={editProduct ? () => { refresh(); setShowProductModal(false); } : undefined} />
       )}
       {showCategoryModal && (
-        <CategoryModal categories={categories} onClose={() => setShowCategoryModal(false)} onRefresh={() => { refresh(); }} />
+        <CategoryModal categories={categories} onClose={() => setShowCategoryModal(false)} onRefresh={refresh} />
       )}
       {showBackupModal && (
         <BackupModal onClose={() => setShowBackupModal(false)} onRestore={refresh} />
