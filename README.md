@@ -9,7 +9,6 @@
 ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝
 ```
 
-# KASI MURAH SPORT
 ### Aplikasi Katalog Produk — Offline & Gratis
 
 ![Android](https://img.shields.io/badge/Android-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white)
@@ -18,14 +17,6 @@
 ![Build](https://img.shields.io/badge/Build-GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
-
----
-
-## ✦ Tentang Aplikasi
-
-**KMs** adalah aplikasi katalog produk untuk toko **Kasi Murah Sport** — dibuat 100% dari HP tanpa laptop, dibantu AI, dan di-build otomatis lewat GitHub Actions.
-
-Data tersimpan **langsung di HP** — tidak butuh internet, tidak ada server, tidak ada biaya bulanan.
 
 ---
 
@@ -54,24 +45,6 @@ Tailwind CSS 4            →  Styling
 Capacitor 6               →  Web → APK Android
 localStorage              →  Database lokal di HP
 GitHub Actions            →  Build APK otomatis di cloud
-```
-
----
-
-## ✦ Cara Build APK
-
-Setiap kali ada perubahan yang di-push ke branch `main`, GitHub Actions otomatis build APK baru.
-
-```
-Push ke main
-    ↓
-GitHub Actions jalan (~2 menit)
-    ↓
-Tab Actions → pilih workflow sukses ✅
-    ↓
-Scroll ke bawah → Artifacts → KMs-apk
-    ↓
-Download → Extract → Install APK
 ```
 
 ---
@@ -121,7 +94,7 @@ KMs/
 
 <div align="center">
 
-**© 2026 Kasi Murah Sport — FaizMelpa**
+**© 2026 — Dncelzie**
 
 *"Dari HP, Untuk HP"*
 
