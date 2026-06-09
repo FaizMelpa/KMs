@@ -73,29 +73,16 @@ KMs/
 
 ---
 
-## ✦ Cara Restore Data
-
-1. Buka app **KMs**
-2. Tap ikon **⬇️** di pojok kanan atas
-3. Tap **"Pilih File Backup"**
-4. Pilih file `.json` dari folder Download
-5. Data langsung masuk ✅
-
----
-
 ## ✦ Dibuat Dengan
 
 - 🤖 **Claude AI** — nulis semua kodenya
 - 📱 **HP doang** — tanpa laptop, tanpa PC
 - ☁️ **GitHub Actions** — build APK gratis di cloud
-- ❤️ **Semangat** — dari nol sampai APK jadi
 
 ---
 
 <div align="center">
 
-**© 2026 — Dncelzie**
-
-*"Dari HP, Untuk HP"*
+*"just for fun"*
 
 </div>
